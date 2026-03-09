@@ -1,0 +1,5 @@
+{
+  "name": "教育词汇数据生产系统",
+  "description": "基于 AI 的标准化教材词库生产与质检平台，支持五维数据生成与人工红标校验流转。",
+  "requestFramePermissions": []
+}
