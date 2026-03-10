@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Download, MoreHorizontal, History, ChevronDown, ChevronLeft, ChevronRight, X, FileJson, FileCode, BookOpen, Volume2, Lightbulb, GraduationCap, Layers } from 'lucide-react';
+import { Search, Download, MoreHorizontal, History, ChevronDown, ChevronLeft, ChevronRight, X, FileJson, FileCode, FileText, BookOpen, Volume2, Lightbulb, GraduationCap, Layers, Loader2, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BatchHistoryModal from '../components/BatchHistoryModal';
 import { mockWords, mockBatches } from '../mockData';

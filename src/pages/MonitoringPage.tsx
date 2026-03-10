@@ -14,7 +14,7 @@ export default function MonitoringPage({ onGoToReview, batchId }: MonitoringPage
 
   const wordsPool = ['empathy', 'kind', 'beautiful', 'run', 'light', 'play', 'present', 'change', 'interest', 'express'];
 
-  const batchData = batchId ? mockBatches.find(b => b.id === batchId) : null;
+  const batchInfo = batchId ? mockBatches.find(b => b.id === batchId) : null;
   const stats = {
     total: mockStats.total,
     approved: mockStats.approved,
