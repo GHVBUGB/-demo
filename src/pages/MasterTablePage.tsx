@@ -146,7 +146,7 @@ export default function MasterTablePage() {
           <div className="flex items-center gap-3">
             <FileText size={16} className="text-blue-600" />
             <span className="text-sm font-medium">批次：<span className="font-bold">{selectedBatchId}</span></span>
-            {batchInfo && <span className="text-xs text-slate-400">(共 {batchInfo.total} 词)</span>}
+            {batchInfo && <span className="text-xs text-slate-400">(共 {batchInfo.total_words} 词)</span>}
           </div>
           <button onClick={() => setSelectedBatchId(null)} className="text-xs text-rose-600 font-bold hover:underline">清除</button>
         </div>
