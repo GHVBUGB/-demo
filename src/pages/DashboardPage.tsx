@@ -1,30 +1,17 @@
-import { useState, useEffect } from 'react';
-import { LayoutDashboard, CheckCircle2, AlertCircle, Clock, Activity, TrendingUp, PieChart, Loader2, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { useState } from 'react';
+import { LayoutDashboard, CheckCircle2, AlertCircle, Clock, Activity, TrendingUp, PieChart, ArrowRight, ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { mockStats, mockBatches } from '../mockData';
 
 interface DashboardPageProps {
   onViewBatch: (batchId: string, view: 'monitoring' | 'review') => void;
 }
 
 export default function DashboardPage({ onViewBatch }: DashboardPageProps) {
-  const [data, setData] = useState<any>(null);
-  const [batches, setBatches] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
   const [activeDim, setActiveDim] = useState<any | null>(null);
 
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/stats').then(res => res.json()),
-      fetch('/api/batches').then(res => res.json())
-    ]).then(([stats, batches]) => {
-      setData(stats);
-      setBatches(batches);
-      setIsLoading(false);
-    });
-  }, []);
-
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white" size={48} /></div>;
+  const data = mockStats;
+  const batches = mockBatches;
 
   const stats = [
     { label: '总词数', value: data.total.toLocaleString(), icon: LayoutDashboard, iconBg: 'bg-blue-50 text-blue-600', valueColor: 'text-blue-700' },

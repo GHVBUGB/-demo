@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   AlertCircle, 
   CheckCircle2, 
   RefreshCw, 
   ChevronDown, 
   ChevronUp,
-  Loader2,
   Info,
   Clock,
   Eye,
@@ -20,12 +19,10 @@ import {
   Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { WordDetail, Meaning, Mnemonic, QualityIssue } from '../types';
+import { mockPendingWords, mockWords, mockBatches } from '../mockData';
 
 export default function ReviewPage({ onBack }: { onBack: () => void }) {
-  const [words, setWords] = useState<any[]>([]);
-  const [counts, setCounts] = useState({ total: 0, can_retry: 0, must_manual: 0 });
-  const [isLoading, setIsLoading] = useState(true);
+  const [localWords, setLocalWords] = useState<any[]>(mockPendingWords);
   const [repairingId, setRepairingId] = useState<number | null>(null);
   const [selectedWord, setSelectedWord] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,7 +30,6 @@ export default function ReviewPage({ onBack }: { onBack: () => void }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'can_retry' | 'must_manual'>('all');
-
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [jobProgress, setJobProgress] = useState<any>(null);
   const [jobResult, setJobResult] = useState<any>(null);
@@ -41,31 +37,25 @@ export default function ReviewPage({ onBack }: { onBack: () => void }) {
   const [repairHistory, setRepairHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
-  const [batchInfo, setBatchInfo] = useState<any>(null);
 
-  const pollInterval = useRef<any>(null);
+  const batchInfo = selectedBatchId ? mockBatches.find(b => b.id === selectedBatchId) : null;
 
-  useEffect(() => {
-    fetchWords();
-  }, [searchQuery, filterField, activeTab, selectedBatchId]);
+  const words = useMemo(() => {
+    return localWords.filter(w => {
+      if (searchQuery && !w.word.includes(searchQuery) && !w.issue.includes(searchQuery)) return false;
+      if (filterField && w.field !== filterField) return false;
+      if (selectedBatchId) return false; // mock 数据不按批次过滤
+      if (activeTab === 'can_retry' && w.repair_attempts >= 3) return false;
+      if (activeTab === 'must_manual' && w.repair_attempts < 3) return false;
+      return true;
+    });
+  }, [localWords, searchQuery, filterField, activeTab, selectedBatchId]);
 
-  useEffect(() => {
-    if (selectedBatchId) {
-      fetchBatchInfo();
-    } else {
-      setBatchInfo(null);
-    }
-  }, [selectedBatchId]);
-
-  const fetchBatchInfo = async () => {
-    try {
-      const res = await fetch(`/api/batches/${selectedBatchId}`);
-      const data = await res.json();
-      setBatchInfo(data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const counts = useMemo(() => ({
+    total: localWords.length,
+    can_retry: localWords.filter(w => w.repair_attempts < 3).length,
+    must_manual: localWords.filter(w => w.repair_attempts >= 3).length,
+  }), [localWords]);
 
   const dimensionStandards = [
     { group: '语音 Sound', items: [
@@ -92,99 +82,68 @@ export default function ReviewPage({ onBack }: { onBack: () => void }) {
     ]},
   ];
 
-  const fetchWords = async () => {
-    setIsLoading(true);
-    const params = new URLSearchParams({
-      search: searchQuery,
-      filter: activeTab,
-    });
-    if (filterField) {
-      params.append('field', filterField);
-    }
-    if (selectedBatchId) {
-      params.append('batchId', selectedBatchId);
-    }
-    const res = await fetch(`/api/pending-repair?${params.toString()}`);
-    const data = await res.json();
-    setWords(data.items);
-    setCounts(data.counts);
-    setIsLoading(false);
-  };
-
-  const handleRepair = async (wordId: number) => {
+  const handleRepair = (wordId: number) => {
     setRepairingId(wordId);
-    const res = await fetch(`/api/words/${wordId}/retry`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field: 'all' })
-    });
-    await res.json();
     setTimeout(() => {
+      const success = Math.random() > 0.4;
+      if (success) {
+        setLocalWords(prev => prev.filter(w => w.id !== wordId));
+      } else {
+        setLocalWords(prev => prev.map(w => w.id === wordId ? { ...w, repair_attempts: w.repair_attempts + 1, issue: w.repair_attempts + 1 >= 3 ? 'AI 修复已达上限 (3次)，请人工介入修改。' : w.issue } : w));
+      }
       setRepairingId(null);
-      fetchWords();
-    }, 1000);
+    }, 1200);
   };
 
-  const handleRepairAll = async () => {
+  const handleRepairAll = () => {
     setIsRegenerating(true);
     setJobResult(null);
     setShowResultCard(false);
-    
-    const res = await fetch('/api/repair-all', { method: 'POST' });
-    const { job_id } = await res.json();
-    
-    pollInterval.current = setInterval(async () => {
-      const pRes = await fetch(`/api/jobs/${job_id}`);
-      const progress = await pRes.json();
-      setJobProgress(progress);
-      
-      if (progress.done) {
-        clearInterval(pollInterval.current);
-        setJobResult(progress.result);
+    const canRetry = localWords.filter(w => w.repair_attempts < 3);
+    let completed = 0;
+    const interval = setInterval(() => {
+      completed++;
+      setJobProgress({ total: canRetry.length, completed, succeeded: Math.floor(completed * 0.6), failed: completed - Math.floor(completed * 0.6), current_word: canRetry[completed - 1]?.word || '', current_dimension: '例句', done: completed >= canRetry.length });
+      if (completed >= canRetry.length) {
+        clearInterval(interval);
+        const succeeded = Math.floor(canRetry.length * 0.6);
+        const failed = canRetry.length - succeeded;
+        setLocalWords(prev => {
+          const toFix = new Set(canRetry.slice(0, succeeded).map(w => w.id));
+          return prev.filter(w => !toFix.has(w.id));
+        });
+        setJobResult({ succeeded, failed, can_ai_retry: Math.floor(failed * 0.5), must_manual: Math.ceil(failed * 0.5) });
         setShowResultCard(true);
         setIsRegenerating(false);
-        setRepairHistory(prev => [{
-          time: new Date().toLocaleTimeString(),
-          succeeded: progress.succeeded,
-          failed: progress.failed
-        }, ...prev]);
-        fetchWords();
+        setRepairHistory(prev => [{ time: new Date().toLocaleTimeString(), succeeded, failed }, ...prev]);
       }
-    }, 1000);
+    }, 300);
   };
 
-  const openDetail = async (wordId: number) => {
-    const res = await fetch(`/api/words/${wordId}`);
-    const data = await res.json();
-    setSelectedWord(data);
+  const openDetail = (wordId: number) => {
+    const full = mockWords.find(w => w.id === wordId);
+    const pending = localWords.find(w => w.id === wordId);
+    if (full) {
+      setSelectedWord({ ...full, issues: pending ? [{ field: pending.field, issue: pending.issue, failed_step: pending.failed_step, retry_count: pending.issue_retry_count }] : [] });
+    } else if (pending) {
+      setSelectedWord({ id: pending.id, word: pending.word, syllables: '', ipa: '', grade_level: '', status: 'pending', meanings: [], mnemonic: null, issues: [{ field: pending.field, issue: pending.issue, failed_step: pending.failed_step, retry_count: pending.issue_retry_count }] });
+    }
   };
 
   const handleSaveWord = async () => {
     if (!selectedWord) return;
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/words/${selectedWord.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedWord)
-      });
-      const result = await res.json();
-      
-      if (result.status === 'approved') {
-        setSelectedWord(null);
-        fetchWords();
-      } else {
-        setSelectedWord({
-          ...selectedWord,
-          issues: result.issues
-        });
-      }
-    } catch (error) {
-      console.error('Save failed:', error);
-    } finally {
-      setIsSaving(false);
+      // mock: 直接标记为已修复
+      await new Promise(r => setTimeout(r, 800));
+      setLocalWords(prev => prev.filter(w => w.id !== selectedWord.id));
+      setSelectedWord(null);
+    } catch (e) {
+      console.error(e);
     }
+    setIsSaving(false);
   };
+
 
   return (
     <div className="space-y-6 pb-20">

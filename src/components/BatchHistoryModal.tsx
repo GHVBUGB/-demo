@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Clock, ChevronRight, FileText, CheckCircle2, Loader2, Hash, Calendar } from 'lucide-react';
+import { X, Clock, ChevronRight, FileText, CheckCircle2, Hash, Calendar } from 'lucide-react';
+import { mockBatches } from '../mockData';
 
 interface Batch {
   id: string;
@@ -18,24 +18,7 @@ interface BatchHistoryModalProps {
 }
 
 export default function BatchHistoryModal({ onClose, onSelectBatch }: BatchHistoryModalProps) {
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchBatches();
-  }, []);
-
-  const fetchBatches = async () => {
-    try {
-      const res = await fetch('/api/batches');
-      const data = await res.json();
-      setBatches(data);
-    } catch (error) {
-      console.error('Failed to fetch batches:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const batches: Batch[] = mockBatches;
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -69,12 +52,7 @@ export default function BatchHistoryModal({ onClose, onSelectBatch }: BatchHisto
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4">
-              <Loader2 className="animate-spin text-blue-600" size={32} />
-              <p className="text-sm text-slate-400">正在加载历史记录...</p>
-            </div>
-          ) : batches.length === 0 ? (
+          {batches.length === 0 ? (
             <div className="text-center py-20 space-y-4">
               <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto">
                 <FileText size={32} />

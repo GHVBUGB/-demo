@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Activity, CheckCircle2, AlertCircle, Clock, Loader2, ArrowRight, Database } from 'lucide-react';
+import { Activity, CheckCircle2, AlertCircle, Clock, ArrowRight, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { mockStats, mockBatches } from '../mockData';
 
 interface MonitoringPageProps {
   onGoToReview: () => void;
@@ -8,59 +9,38 @@ interface MonitoringPageProps {
 }
 
 export default function MonitoringPage({ onGoToReview, batchId }: MonitoringPageProps) {
-  const [progress, setProgress] = useState(0);
-  const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0, processing: 0 });
-  const [batchInfo, setBatchInfo] = useState<any>(null);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [activeWord, setActiveWord] = useState<string>('');
-  const [activeGate, setActiveGate] = useState<number>(1);
+  const [activeWord, setActiveWord] = useState<string>('empathy');
+  const [activeGate, setActiveGate] = useState<number>(2);
 
-  const wordsPool = ['empathy', 'good', 'apple', 'banana', 'cherry', 'dynamic', 'future', 'learning', 'education', 'vocabulary'];
+  const wordsPool = ['empathy', 'kind', 'beautiful', 'run', 'light', 'play', 'present', 'change', 'interest', 'express'];
 
-  useEffect(() => {
-    if (batchId) {
-      fetch(`/api/batches/${batchId}`)
-        .then(res => res.json())
-        .then(data => setBatchInfo(data));
-    }
-  }, [batchId]);
+  const batchData = batchId ? mockBatches.find(b => b.id === batchId) : null;
+  const stats = {
+    total: mockStats.total,
+    approved: mockStats.approved,
+    pending: mockStats.pending,
+    processing: 0,
+  };
+  const progress = Math.round((stats.approved / stats.total) * 100);
+
+  const [logs] = useState<string[]>([
+    `[${new Date().toLocaleTimeString()}] 启动生产批次 #${batchId || 'GLOBAL'}`,
+    `[${new Date().toLocaleTimeString()}] 正在加载模型: Gemini Pro 1.5...`,
+    `[${new Date().toLocaleTimeString()}] 批次策略: 每 100 个单词一组进行质检`,
+    `[${new Date().toLocaleTimeString()}] 异常策略: 累计 50 个问题词进入 AI 辅助修改队列`,
+    `[${new Date().toLocaleTimeString()}] Gate 1 释义校验通过: 1,850 词`,
+    `[${new Date().toLocaleTimeString()}] Gate 2 助记校验通过: 1,820 词`,
+    `[${new Date().toLocaleTimeString()}] Gate 3 例句校验通过: 1,930 词`,
+    `[${new Date().toLocaleTimeString()}] ✅ 生产任务已完成，共入库 ${stats.approved} 词`,
+  ]);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      const url = batchId ? `/api/batches/${batchId}` : '/api/stats';
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          setStats({
-            total: data.total,
-            approved: data.approved,
-            pending: data.pending,
-            processing: data.processing || 0
-          });
-          
-          const currentProgress = data.total > 0 ? Math.round((data.approved / data.total) * 100) : 0;
-          setProgress(currentProgress);
-
-          if (currentProgress < 100) {
-            setActiveWord(wordsPool[Math.floor(Math.random() * wordsPool.length)]);
-            setActiveGate(Math.floor(Math.random() * 3) + 1);
-          }
-
-          if (currentProgress >= 100 && data.pending === 0) {
-            clearInterval(timer);
-          }
-        });
+      setActiveWord(wordsPool[Math.floor(Math.random() * wordsPool.length)]);
+      setActiveGate(Math.floor(Math.random() * 3) + 1);
     }, 2000);
-
-    setLogs([
-      `[${new Date().toLocaleTimeString()}] 启动生产批次 #${batchId || 'GLOBAL'}`,
-      `[${new Date().toLocaleTimeString()}] 正在加载模型: Gemini Pro 1.5...`,
-      `[${new Date().toLocaleTimeString()}] 批次策略: 每 100 个单词一组进行质检`,
-      `[${new Date().toLocaleTimeString()}] 异常策略: 累计 50 个问题词进入 AI 辅助修改队列`,
-    ]);
-
     return () => clearInterval(timer);
-  }, [batchId]);
+  }, []);
 
   return (
     <div className="space-y-8">

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Filter, Download, MoreHorizontal, History, FileText, ChevronDown, ChevronLeft, ChevronRight, X, Loader2, FileJson, FileCode, BookOpen, Volume2, Lightbulb, GraduationCap, Layers } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Download, MoreHorizontal, History, ChevronDown, ChevronLeft, ChevronRight, X, FileJson, FileCode, BookOpen, Volume2, Lightbulb, GraduationCap, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BatchHistoryModal from '../components/BatchHistoryModal';
+import { mockWords, mockBatches } from '../mockData';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 const textbookSources = [
   '人教版三年级英语上册(PEP)',
@@ -19,70 +20,36 @@ const textbookSources = [
 ];
 
 export default function MasterTablePage() {
-  const [words, setWords] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
   const [filterLetter, setFilterLetter] = useState('');
   const [filterSource, setFilterSource] = useState('');
   const [isSourceOpen, setIsSourceOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [batchInfo, setBatchInfo] = useState<any>(null);
   const [detailWord, setDetailWord] = useState<any>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const openWordDetail = async (wordId: number) => {
-    setDetailLoading(true);
-    setDetailWord(null);
-    try {
-      const res = await fetch(`/api/words/${wordId}`);
-      const data = await res.json();
-      setDetailWord(data);
-    } catch { }
-    setDetailLoading(false);
+  const openWordDetail = (wordId: number) => {
+    const found = mockWords.find(w => w.id === wordId) || null;
+    setDetailWord(found);
   };
 
-  const closeDetail = () => { setDetailWord(null); setDetailLoading(false); };
+  const closeDetail = () => setDetailWord(null);
 
+  const filteredWords = useMemo(() => {
+    return mockWords.filter(w => {
+      if (filterLetter && !w.word.toLowerCase().startsWith(filterLetter.toLowerCase())) return false;
+      if (filterSource && !w.meanings.some((m: any) => m.sources?.includes(filterSource))) return false;
+      if (selectedBatchId && w.batch_id !== selectedBatchId) return false;
+      return true;
+    });
+  }, [filterLetter, filterSource, selectedBatchId]);
+
+  const total = filteredWords.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  const fetchWords = useCallback(() => {
-    setIsLoading(true);
-    const params = new URLSearchParams();
-    params.append('page', String(page));
-    params.append('pageSize', String(PAGE_SIZE));
-    if (filterLetter) params.append('letter', filterLetter);
-    if (filterSource) params.append('source', filterSource);
-    if (selectedBatchId) params.append('batchId', selectedBatchId);
-    
-    fetch(`/api/words?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => {
-        setWords(data.items || []);
-        setTotal(data.total || 0);
-        setIsLoading(false);
-      })
-      .catch(() => setIsLoading(false));
-  }, [page, filterLetter, filterSource, selectedBatchId]);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(fetchWords, 200);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [fetchWords]);
-
-  useEffect(() => { setPage(1); }, [filterLetter, filterSource, selectedBatchId]);
-
-  useEffect(() => {
-    if (selectedBatchId) {
-      fetch(`/api/batches/${selectedBatchId}`).then(r => r.json()).then(setBatchInfo).catch(() => {});
-    } else {
-      setBatchInfo(null);
-    }
-  }, [selectedBatchId]);
+  const words = filteredWords.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const isLoading = false;
+  const batchInfo = selectedBatchId ? mockBatches.find(b => b.id === selectedBatchId) : null;
 
   return (
     <div className="space-y-4">
