@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Activity, CheckCircle2, AlertCircle, Clock, ArrowRight, Database } from 'lucide-react';
+import { Activity, CheckCircle2, AlertCircle, Clock, ArrowRight, Database, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { mockStats, mockBatches } from '../mockData';
 

@@ -49,6 +49,7 @@ export default function MasterTablePage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const words = filteredWords.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const isLoading = false;
+  const detailLoading = false;
   const batchInfo = selectedBatchId ? mockBatches.find(b => b.id === selectedBatchId) : null;
 
   return (
