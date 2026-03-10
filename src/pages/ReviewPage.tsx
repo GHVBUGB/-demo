@@ -16,7 +16,8 @@ import {
   History,
   Lightbulb,
   FileText,
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { mockPendingWords, mockWords, mockBatches } from '../mockData';
@@ -39,6 +40,7 @@ export default function ReviewPage({ onBack }: { onBack: () => void }) {
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
 
   const batchInfo = selectedBatchId ? mockBatches.find(b => b.id === selectedBatchId) : null;
+  const isLoading = false;
 
   const words = useMemo(() => {
     return localWords.filter(w => {
@@ -262,7 +264,7 @@ export default function ReviewPage({ onBack }: { onBack: () => void }) {
             <span className="text-sm font-medium">当前查看批次：<span className="font-bold">{selectedBatchId}</span></span>
             {batchInfo && (
               <span className="text-xs text-slate-400 ml-2">
-                (总计 {batchInfo.total} 词, 已通过 {batchInfo.approved} 词)
+                (总计 {batchInfo.total_words} 词)
               </span>
             )}
           </div>
